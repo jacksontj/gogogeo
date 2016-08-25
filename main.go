@@ -20,7 +20,8 @@ var opts struct {
 	// Example of a pointer
 	Port int `long:"port" default:"80" description:"Port for HTTP API"`
 
-	Logfile string `long:"logFile" description:"path to write logs to"`
+	Logfile    string `long:"logFile" description:"path to write logs to"`
+	LogBacklog int    `long:"logBacklog" default:"1000" description:"Buffer size for async log"`
 }
 
 func main() {
@@ -47,7 +48,8 @@ func main() {
 		if err != nil {
 			logrus.Fatalf("unable to open log file: %v", err)
 		}
-		loggingHandler = handlers.LoggingHandler(fh, router)
+		a := NewAsyncLogWriter(fh, opts.LogBacklog)
+		loggingHandler = handlers.LoggingHandler(a, router)
 	} else {
 		loggingHandler = handlers.LoggingHandler(os.Stdout, router)
 	}
