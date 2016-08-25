@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/gorilla/handlers"
 	"github.com/jessevdk/go-flags"
 	"github.com/julienschmidt/httprouter"
 	"github.com/oschwald/geoip2-golang"
@@ -17,6 +19,8 @@ var opts struct {
 
 	// Example of a pointer
 	Port int `long:"port" default:"80" description:"Port for HTTP API"`
+
+	Logfile string `long:"logFile" description:"path to write logs to"`
 }
 
 func main() {
@@ -37,7 +41,18 @@ func main() {
 	httpApi := NewHTTPApi(db)
 	httpApi.Start(router)
 
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", opts.Port), router); err != nil {
+	var loggingHandler http.Handler
+	if opts.Logfile != "" {
+		fh, err := os.OpenFile(opts.Logfile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			logrus.Fatalf("unable to open log file: %v", err)
+		}
+		loggingHandler = handlers.LoggingHandler(fh, router)
+	} else {
+		loggingHandler = handlers.LoggingHandler(os.Stdout, router)
+	}
+
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", opts.Port), loggingHandler); err != nil {
 		logrus.Fatalf("Error serving httpapi: %v", err)
 	}
 }
