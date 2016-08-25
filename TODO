@@ -1,0 +1,4 @@
+TODO:
+    - auto-reload new DBs if a new one shows up
+    - config/CLI args
+    - metrics
