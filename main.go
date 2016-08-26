@@ -15,7 +15,7 @@ import (
 
 var opts struct {
 	// Example of a required flag
-	DBPath string `long:"dbPath" description:"path to the maxmind DB" required:"true"`
+	DBPath []string `long:"dbPath" description:"path to the maxmind DB. Multiples may be supplied, first match for a lookup type wins" required:"true"`
 
 	// Example of a pointer
 	Port int `long:"port" default:"80" description:"Port for HTTP API"`
@@ -31,15 +31,19 @@ func main() {
 	}
 
 	// Open up the maxmind DB
-	db, err := geoip2.Open(opts.DBPath)
-	if err != nil {
-		log.Fatal(err)
+	dbs := make([]*geoip2.Reader, 0)
+	for _, path := range opts.DBPath {
+		db, err := geoip2.Open(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+		dbs = append(dbs, db)
 	}
-	defer db.Close()
 
 	// Create the HTTP endpoint
 	router := httprouter.New()
-	httpApi := NewHTTPApi(db)
+	httpApi := NewHTTPApi(dbs)
 	httpApi.Start(router)
 
 	var loggingHandler http.Handler
